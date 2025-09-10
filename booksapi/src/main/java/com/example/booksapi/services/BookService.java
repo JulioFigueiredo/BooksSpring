@@ -5,45 +5,50 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.booksapi.dtos.BookRequest;
+import com.example.booksapi.dtos.BookResponse;
 import com.example.booksapi.entities.Book;
+import com.example.booksapi.mappers.BookMapper;
 import com.example.booksapi.repositories.BookRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class BookService {
-    
- @Autowired
+
+    @Autowired
     private BookRepository repository;
 
-    public List<Book> getAllBooks() {
-        return repository.findAll();
+    public List<BookResponse> getBooks() {
+        return repository.findAll()
+                .stream()
+                .map(BookMapper::toResponse)
+                .toList();
     }
 
-    public Book getBookById(Long id) {
+    public BookResponse getBookById(Long id) {
         return repository.findById(id)
-                         .orElseThrow(() -> new EntityNotFoundException("Livro não encontrado"));
+                .map(BookMapper::toResponse)
+                .orElseThrow(() -> new EntityNotFoundException("Livro não cadastrado"));
     }
 
-    public Book saveBook(Book book) {
-        return repository.save(book);
+    public BookResponse saveBook(BookRequest request) {
+        Book book = BookMapper.toEntity(request);
+        Book saved = repository.save(book);
+        return BookMapper.toResponse(saved);
     }
 
-    public void updateBook(Book book, Long id) {
+    public void updateBook(BookRequest request, Long id) {
         Book aux = repository.getReferenceById(id);
-        aux.setTitle(book.getTitle());
-        aux.setAuthor(book.getAuthor());
-        aux.setPrice(book.getPrice());
-        aux.setYear(book.getYear());
-
+        BookMapper.updateEntity(aux, request);
         repository.save(aux);
     }
 
-    public void deleteBook(Long id) {
-        if(repository.existsById(id))
+    public void deleteBookById(Long id) {
+        if (repository.existsById(id)) {
             repository.deleteById(id);
-        else
+        } else {
             throw new EntityNotFoundException("Livro não existe");
-    }  
-
+        }
+    }
 }
